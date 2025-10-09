@@ -1,8 +1,8 @@
 services:
-  dfp-proxy-api:
-    image: redteamsubnet61/rest.dfp-proxy:0.0.0-250101
+  vm-runner-api:
+    image: redteamsubnet61/rest.mdm-sn-container-runner:0.0.0-250101
     # volumes:
-    #   - "api-vscode-server:/home/dfp-user/.vscode-server"
+    #   - "api-vscode-server:/home/vm-user/.vscode-server"
     # deploy:
     #   replicas: 0
     #   resources:

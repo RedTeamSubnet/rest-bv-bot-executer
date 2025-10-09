@@ -4,7 +4,7 @@
 ARG BASE_IMAGE=ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG DFP_PROXY_API_SLUG="rest.dfp-proxy"
+ARG DFP_PROXY_API_SLUG="rest.vm-runner"
 
 
 ## Here is the builder image:

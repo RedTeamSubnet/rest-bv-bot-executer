@@ -22,7 +22,7 @@ fi
 
 
 ## --- Variables --- ##
-_DEFAULT_SERVICE="dfp-proxy-api"
+_DEFAULT_SERVICE="vm-runner-api"
 ## --- Variables --- ##
 
 

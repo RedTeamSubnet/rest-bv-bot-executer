@@ -3,7 +3,7 @@ debug: false
 
 api:
   name: "Device Fingerprinter Proxy API"
-  slug: "rest.dfp-proxy"
+  slug: "rest.vm-runner"
   bind_host: "0.0.0.0"
   port: 8000
   version: "1"

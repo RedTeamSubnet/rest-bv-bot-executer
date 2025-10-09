@@ -1,25 +1,35 @@
 services:
-  dfp-proxy-api:
-    image: redteamsubnet61/rest.dfp-proxy:latest
+  vm-runner-api:
+    # image: redteamsubnet61/rest.mdm-sn-container-runner:latest
     build:
       context: .
     restart: unless-stopped
+    networks:
+      - humanize-behaviour-net
+    privileged: true
+    user: "0:0"  # Run as root to access Docker socket
     environment:
       TERM: ${TERM:-xterm}
       TZ: ${TZ:-UTC}
-      DFP_PROXY_API_PORT: ${DFP_PROXY_API_PORT:-8000}
-      DFP_CHALLENGE_API_KEY: ${DFP_CHALLENGE_API_KEY}
+      VM_RUNNER_API_PORT: ${VM_RUNNER_API_PORT:-8000}
     env_file:
       - path: .env
         required: false
     volumes:
-      - "api-logs:${DFP_PROXY_API_LOGS_DIR:-/var/log/rest.dfp-proxy}"
-      - "api-data:${DFP_PROXY_API_DATA_DIR:-/var/lib/rest.dfp-proxy}"
+      - "api-logs:${VM_RUNNER_API_LOGS_DIR:-/var/log/rest.vm-runner}"
+      - "api-data:${VM_RUNNER_API_DATA_DIR:-/var/lib/rest.vm-runner}"
+      - "/var/run/docker.sock:/var/run/docker.sock"
     ports:
-      - "${DFP_PROXY_API_PORT:-8000}:${DFP_PROXY_API_PORT:-8000}"
+      - "${VM_RUNNER_API_PORT:-8000}:${VM_RUNNER_API_PORT:-8000}"
     tty: true
 
 
+networks:
+  humanize-behaviour-net:
+    name: humanize-behaviour-net
+    external: true
+
 volumes:
+
   api-logs:
   api-data:

@@ -2,7 +2,7 @@
 
 ## 🌎 Environment Variables
 
-[**`.env.example`**](https://github.com/RedTeam/rest.dfp-proxy/blob/main/.env.example):
+[**`.env.example`**](https://github.com/RedTeam/rest.vm-runner/blob/main/.env.example):
 
 ```sh
 ## --- Environment variable --- ##
@@ -13,8 +13,8 @@ DEBUG=false
 
 ## -- API configs -- ##
 DFP_PROXY_API_PORT=8000
-# DFP_PROXY_API_LOGS_DIR="/var/log/rest.dfp-proxy"
-# DFP_PROXY_API_DATA_DIR="/var/lib/rest.dfp-proxy"
+# DFP_PROXY_API_LOGS_DIR="/var/log/rest.vm-runner"
+# DFP_PROXY_API_DATA_DIR="/var/lib/rest.vm-runner"
 
 # DFP_PROXY_API_VERSION="1"
 # DFP_PROXY_API_PREFIX="/api/v{api_version}"
@@ -28,7 +28,7 @@ DFP_PROXY_API_PORT=8000
 
 You can customize the command arguments to debug or run the service with different commands.
 
-[**`compose.override.yml`**](https://github.com/RedTeam/rest.dfp-proxy/blob/main/templates/compose/compose.override.dev.yml):
+[**`compose.override.yml`**](https://github.com/RedTeam/rest.vm-runner/blob/main/templates/compose/compose.override.dev.yml):
 
 ```yml
     command: ["/bin/bash"]

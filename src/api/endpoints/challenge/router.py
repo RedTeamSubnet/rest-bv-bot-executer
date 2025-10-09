@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi import APIRouter, HTTPException, Request, Depends, Query, Body
 
 from api.core.constants import ErrorCodeEnum, ALPHANUM_HYPHEN_REGEX
@@ -11,10 +11,56 @@ from api.core.dependencies.auth import auth_api_key
 from api.logger import logger
 
 from . import service
-from .schemas import Fingerprinter
+from .schemas import Fingerprinter, BuildAndRunRequest
 
 
 router = APIRouter(tags=["Challenge"])
+
+
+@router.get(
+    "/health",
+    summary="Health check",
+    description="Check if the VM runner service is healthy and running.",
+    response_class=JSONResponse,
+)
+def get_health(request: Request):
+    _request_id = request.state.request_id
+    logger.info(f"[{_request_id}] - Health check...")
+
+    return {
+        "status": "healthy",
+        "service": "vm-runner",
+        "message": "VM runner is up and running"
+    }
+
+
+@router.post(
+    "/build_and_run",
+    summary="Build and run bot container",
+    description="Receives bot.py and Dockerfile, builds Docker container, and runs the bot.",
+    response_class=JSONResponse,
+    responses={422: {}, 500: {}},
+)
+def post_build_and_run(request: Request, payload: BuildAndRunRequest):
+    _request_id = request.state.request_id
+    logger.info(f"[{_request_id}] - Building and running bot container...")
+
+    try:
+        result = service.build_and_run_bot(
+            bot_py=payload.bot_py,
+            dockerfile=payload.dockerfile,
+            session_count=payload.session_count,
+        )
+        logger.success(f"[{_request_id}] - Successfully built and ran bot container.")
+        return result
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception(f"[{_request_id}] - Failed to build and run bot container!")
+        raise BaseHTTPException(
+            error_enum=ErrorCodeEnum.INTERNAL_SERVER_ERROR,
+            message=f"Failed to build and run bot container: {str(err)}",
+        )
 
 
 @router.post(
@@ -48,74 +94,10 @@ def post_fingerprinter(request: Request, fingerprinter: Fingerprinter):
     return _response
 
 
-@router.get(
-    "/_web",
-    summary="Serves the webpage",
-    description="This endpoint serves the webpage for the challenge.",
-    responses={422: {}},
-    response_class=HTMLResponse,
-)
-def get_web(request: Request, order_id: int = Query(..., ge=0, lt=1000000)):
-
-    _request_id = request.state.request_id
-    logger.info(f"[{_request_id}] - Serving webpage for order ID {order_id}...")
-    try:
-        _html_response = service.get_web(request=request)
-        logger.success(
-            f"[{_request_id}] - Successfully served webpage for order ID {order_id}."
-        )
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception(
-            f"[{_request_id}] - Failed to serve webpage for order ID {order_id}!"
-        )
-        raise BaseHTTPException(
-            error_enum=ErrorCodeEnum.INTERNAL_SERVER_ERROR,
-            message="Failed to serve webpage!",
-        )
-
-    return _html_response
 
 
-@router.post(
-    "/fingerprint",
-    summary="Submit the fingerprint",
-    description="This endpoint receives the fingerprint data and submit it to challenger service.",
-    response_model=BaseResPM,
-    responses={422: {}},
-)
-def post_fingerprint(
-    request: Request,
-    order_id: int = Body(..., ge=0, lt=1000000),
-    fingerprint: str = Body(
-        ..., min_length=2, max_length=128, pattern=ALPHANUM_HYPHEN_REGEX
-    ),
-):
 
-    _request_id = request.state.request_id
-    logger.info(f"[{_request_id}] - Submitting fingerprint for order ID {order_id}...")
-    try:
-        service.submit_fingerprint(order_id=order_id, fingerprint=fingerprint)
-        logger.success(
-            f"[{_request_id}] - Successfully submitted fingerprint for order ID {order_id}."
-        )
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception(
-            f"[{_request_id}] - Failed to submit fingerprint for order ID {order_id}!"
-        )
-        raise BaseHTTPException(
-            error_enum=ErrorCodeEnum.INTERNAL_SERVER_ERROR,
-            message="Failed to submit fingerprint!",
-        )
 
-    _response = BaseResponse(
-        request=request,
-        message="Successfully submitted fingerprint.",
-    )
-    return _response
 
 
 __all__ = [
