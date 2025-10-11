@@ -57,9 +57,13 @@ def post_build_and_run(request: Request, payload: BuildAndRunRequest):
         raise
     except Exception as err:
         logger.exception(f"[{_request_id}] - Failed to build and run bot container!")
+        # Truncate error message to avoid Pydantic validation error (max 256 chars)
+        error_msg = str(err)
+        if len(error_msg) > 200:
+            error_msg = error_msg[:200] + "... (truncated)"
         raise BaseHTTPException(
             error_enum=ErrorCodeEnum.INTERNAL_SERVER_ERROR,
-            message=f"Failed to build and run bot container: {str(err)}",
+            message=f"Failed to build/run bot: {error_msg}",
         )
 
 

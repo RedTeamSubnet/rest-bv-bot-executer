@@ -43,6 +43,11 @@ def run_bot(
             logger.error("window.ACTIONS_LIST is empty or doesn't exist")
             return False
 
+        # Handle nested list structure - if actions_list is a list of lists, flatten it
+        if isinstance(actions_list, list) and len(actions_list) > 0 and isinstance(actions_list[0], list):
+            logger.info("Detected nested actions_list structure, flattening...")
+            actions_list = actions_list[0]
+
         # Perform configured actions
         for i, _action in enumerate(actions_list):
             if _action["type"] == "click":
@@ -90,6 +95,7 @@ def run_bot(
         lenOfPage = driver.execute_script(
             "window.scrollTo(0, document.body.scrollHeight);var lenOfPage=document.body.scrollHeight;return lenOfPage;"
         )
+        logger.info(f"Initial page length: {lenOfPage}")
         match = False
         while match == False:
             lastCount = lenOfPage
@@ -98,6 +104,7 @@ def run_bot(
                 "window.scrollTo(0, document.body.scrollHeight);var lenOfPage=document.body.scrollHeight;return lenOfPage;"
             )
             if lastCount == lenOfPage:
+                logger.info("Reached bottom of page")
                 match = True
 
         _end_session_button = _wait.until(
@@ -111,6 +118,27 @@ def run_bot(
         time.sleep(1)  # Give time for smooth scrolling to complete
 
         _end_session_button.click()
+        logger.info("Clicked end-session button")
+
+        # Give the browser a moment to flush console messages
+        time.sleep(1)
+
+        # Attempt to read browser console logs (may not be supported by all drivers)
+        try:
+            console_logs = driver.get_log("browser")
+            if console_logs:
+                logger.info("Browser console logs:")
+                for entry in console_logs:
+                    # Typical entry keys: level, message, source, timestamp
+                    level = entry.get("level")
+                    msg = entry.get("message")
+                    source = entry.get("source") or entry.get("sourceURL") or ""
+                    ts = entry.get("timestamp")
+                    logger.info(f"[console][{level}] {ts} {source} - {msg}")
+            else:
+                logger.info("No browser console logs available.")
+        except Exception as e:
+            logger.warning(f"Could not retrieve browser console logs: {e}")
 
         return True
 

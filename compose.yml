@@ -27,7 +27,7 @@ services:
 networks:
   humanize-behaviour-net:
     name: humanize-behaviour-net
-    external: true
+    driver: bridge
 
 volumes:
 

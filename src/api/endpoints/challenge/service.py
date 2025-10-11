@@ -4,7 +4,7 @@ import os
 import pathlib
 import time
 import docker
-from typing import Dict
+from typing import Dict, Optional
 
 import requests
 from pydantic import validate_call
@@ -19,57 +19,73 @@ from api.logger import logger
 from .schemas import Fingerprinter
 
 
-_API_DIR = str(pathlib.Path(__file__).resolve().parents[2])
+
 _BOT_DIR = str(pathlib.Path(__file__).resolve().parents[3] / "bot")
 _BOT_DOCKERFILE_PATH = os.path.join(_BOT_DIR, "Dockerfile")
 _BOT_PY_PATH = os.path.join(_BOT_DIR, "src", "core", "bot.py")
 
 
-@validate_call
-def save_fingerprinter(fingerprinter: Fingerprinter) -> None:
 
-    _fp_js_path = os.path.join(_API_DIR, "static", "js", "fingerprinter.js")
-    utils.remove_file(_fp_js_path)
+@validate_call(config={"arbitrary_types_allowed": True})
+def ensure_bot_network(docker_client: docker.DockerClient) -> str:
+    """
+    Ensure isolated network for bot execution exists.
+    The network is persistent and shared with the challenge container.
+    Does NOT remove/recreate to avoid disrupting the challenge container connection.
 
-    with open(_fp_js_path, "w") as _file:
-        _file.write(fingerprinter.fingerprinter_js)
+    Args:
+        docker_client: Docker client instance
 
-    return
+    Returns:
+        Network name
+    """
+    network_name = "bot-executor-net"
+
+    # Check if network already exists
+    try:
+        existing_network = docker_client.networks.get(network_name)
+        logger.info(f"Bot network '{network_name}' already exists, using existing network")
+        return network_name
+    except docker.errors.NotFound:
+        logger.info(f"Bot network '{network_name}' not found, creating it...")
+
+    # Create internal network (no internet access, only internal communication)
+    try:
+        docker_client.networks.create(
+            name=network_name,
+            driver="bridge",
+            internal=True,  # No external/internet access
+            check_duplicate=True,
+            labels={"type": "bot-executor"}
+        )
+        logger.success(f"Isolated bot network '{network_name}' created successfully")
+    except docker.errors.APIError as e:
+        # Network might have been created by another process (race condition)
+        if "already exists" in str(e).lower():
+            logger.info(f"Bot network '{network_name}' already exists (created concurrently)")
+        else:
+            raise
+
+    return network_name
 
 
 @validate_call(config={"arbitrary_types_allowed": True})
-def get_web(request: Request) -> HTMLResponse:
+def cleanup_bot_network(docker_client: docker.DockerClient, network_name: str) -> None:
+    """
+    Clean up the isolated bot network after execution.
 
-    _templates = Jinja2Templates(directory=os.path.join(_API_DIR, "templates", "html"))
-    _html_response: HTMLResponse = _templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-        },
-    )
-    return _html_response
-
-
-@validate_call
-def submit_fingerprint(order_id: int, fingerprint: str) -> None:
-
-    _endpoint = "/_fingerprint"
-    _base_url = str(config.challenge.base_url).rstrip("/")
-
-    _url = f"{_base_url}{_endpoint}"
-    _headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-API-Key": config.challenge.api_key.get_secret_value(),
-    }
-    _payload = {"order_id": order_id, "fingerprint": fingerprint}
-    _response = requests.post(_url, headers=_headers, json=_payload)
-    _response.raise_for_status()
-
-    return
+    Args:
+        docker_client: Docker client instance
+        network_name: Name of the network to cleanup
+    """
+    try:
+        network = docker_client.networks.get(network_name)
+        network.remove()
+        logger.info(f"Cleaned up bot network: {network_name}")
+    except docker.errors.NotFound:
+        logger.warning(f"Bot network '{network_name}' not found for cleanup")
+    except Exception as e:
+        logger.warning(f"Failed to cleanup bot network '{network_name}': {e}")
 
 
 @validate_call
@@ -113,6 +129,7 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
     docker_client = docker.from_env()
 
     image_tag = f"hbc-bot:latest-{int(time.time())}"
+    bot_network_name = None
 
     try:
         image, build_logs = docker_client.images.build(
@@ -128,32 +145,50 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
 
         logger.success(f"Successfully built image: {image_tag}")
 
+        # Ensure bot network exists (shared with challenge container)
+        bot_network_name = ensure_bot_network(docker_client)
+
         # Run the container with read-only volume mount and security restrictions
         logger.info(f"Running container for {session_count} sessions...")
 
         # Get challenge VM endpoint from config
-        challenge_vm_host = os.getenv("CHALLENGE_VM_HOST", "humanize-behaviour-net")
-        challenge_vm_port = os.getenv("CHALLENGE_VM_PORT", "10002")
+        # Use container name as hostname since both containers are on bot-executor-net
+        challenge_vm_host = os.getenv("CHALLENGE_VM_HOST", "challenger-api")
+        challenge_vm_port = os.getenv("CHALLENGE_VM_PORT", "10001")
         web_url = f"http://{challenge_vm_host}:{challenge_vm_port}/_web"
+
+        logger.info(f"Bot will connect to: {web_url}")
+
+        # chek if bot_container exists and remove it
+        try:
+            existing_container = docker_client.containers.get("bot_container")
+            logger.info("Removing existing bot_container...")
+            existing_container.remove(force=True)
+        except docker.errors.NotFound:
+            pass
 
         container = docker_client.containers.run(
             image_tag,
+            name="bot_container",
             environment={
                 "HBC_WEB_URL": web_url,
-                "HBC_SESSION_COUNT": str(session_count),
+                "HBC_SESSION_COUNT": 3,
             },
-            network="humanize-behaviour-net",  # Use shared network for service access
-            tmpfs={"/tmp": "size=100M,mode=1777"},  # Writable /tmp with size limit
-            mem_limit="512m",  # Memory limit
-            memswap_limit="512m",  # Disable swap
-            cpu_quota=50000,  # 50% CPU limit (100000 = 100%)
-            pids_limit=100,  # Limit number of processes
-            cap_drop=["ALL"],  # Drop all capabilities
-            cap_add=["NET_BIND_SERVICE"],  # Only allow network binding
+            network=bot_network_name,  # Use isolated bot network (no internet access)
+            tmpfs={
+                "/tmp": "size=512M,mode=1777",  # Writable /tmp for Chrome
+                "/dev/shm": "size=2g",  # Shared memory for Chrome (prevents crashes)
+            },
+            mem_limit="8g",  # Memory limit - Chrome needs more memory
+            memswap_limit="8g",  # Disable swap
+            cpu_quota=100000,  # 50% CPU limit (50000 = 50%)
+            pids_limit=256,  # Limit number of processes - Chrome spawns multiple processes
+            cap_drop=["NET_RAW", "NET_ADMIN"],  # Drop dangerous capabilities only
             security_opt=["no-new-privileges"],  # Prevent privilege escalation
             remove=True,
             detach=False,
-            # read_only=True,  # Read-only root filesystem
+            shm_size="4g",  # Shared memory size for Chrome
+            # read_only=True,  # Read-only root filesystem - disabled for Chrome compatibility
         )
 
         logger.success("Bot execution completed successfully")
@@ -164,6 +199,8 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
             logger.info(f"Cleaned up image: {image_tag}")
         except Exception as e:
             logger.warning(f"Failed to cleanup image: {e}")
+
+        # Note: Network is NOT cleaned up as it's persistent and shared with challenge container
 
         return {
             "status": "success",
@@ -183,8 +220,7 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
 
 
 __all__ = [
-    "save_fingerprinter",
-    "get_web",
-    "submit_fingerprint",
+    "ensure_bot_network",
+    "cleanup_bot_network",
     "build_and_run_bot",
 ]
