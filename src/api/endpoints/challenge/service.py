@@ -128,7 +128,7 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
     logger.info("Building Docker image...")
     docker_client = docker.from_env()
 
-    image_tag = f"hbc-bot:latest-{int(time.time())}"
+    image_tag = f"hbc-bot:latest"
     bot_network_name = None
 
     try:
