@@ -110,20 +110,31 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
 
     # Process dockerfile: remove any existing ENTRYPOINT and add our own with script copy
     dockerfile_lines = dockerfile.strip().split("\n")
-    filtered_lines = [line for line in dockerfile_lines if not line.strip().startswith("ENTRYPOINT")]
-
-    # Add COPY for entrypoint script and set it as ENTRYPOINT
-    final_dockerfile = "\n".join(filtered_lines) + "\n"
-    # Use relative path from build context (bot directory)
-    final_dockerfile += "COPY ./scripts/docker-entrypoint.sh /docker-entrypoint.sh\n"
-    final_dockerfile += "RUN sudo chmod +x /docker-entrypoint.sh && sudo chown seluser:seluser /docker-entrypoint.sh\n"
-    final_dockerfile += 'ENTRYPOINT ["/docker-entrypoint.sh"]\n'
+    filtered_lines = [line for line in dockerfile_lines if not line.strip().startswith("ENTRYPOINT") and not line.strip().startswith("CMD")]
 
     # Save Dockerfile
     logger.info(f"Saving Dockerfile to {_BOT_DOCKERFILE_PATH}")
-    with open(_BOT_DOCKERFILE_PATH, "w") as f:
-        f.write(final_dockerfile)
+    # Check and log source files existence
+    source_files = [
+        f"{_BOT_DIR}/src/main.py",
+        f"{_BOT_DIR}/src/constants.py",
+        f"{_BOT_DIR}/src/core/bot.py"
+    ]
 
+    for file_path in source_files:
+        if os.path.exists(file_path):
+            logger.info(f"Source file exists: {file_path}")
+        else:
+            logger.error(f"Source file not found: {file_path}")
+            raise FileNotFoundError(f"Required bot file not found: {file_path}")
+
+    # Write Dockerfile
+    with open(_BOT_DOCKERFILE_PATH, "w") as f:
+        f.write("\n".join(filtered_lines))
+        f.write(f"\nCOPY --chown=seluser:seluser /src/main.py /app/main.py\n")
+        f.write(f"COPY --chown=seluser:seluser /src/constants.py /app/constants.py\n")
+        f.write(f"COPY --chown=seluser:seluser /src/core/bot.py /app/core/bot.py\n")
+        f.write("\nENTRYPOINT [\"/bin/bash\", \"-c\", \"cd /app && source venv/bin/activate && exec python -u main.py\"]\n")
     # Build Docker image
     logger.info("Building Docker image...")
     docker_client = docker.from_env()
@@ -173,11 +184,15 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
             environment={
                 "HBC_WEB_URL": web_url,
                 "HBC_SESSION_COUNT": 3,
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONPYCACHEPREFIX": "/tmp/pycache",
             },
+            entrypoint=["/bin/bash", "-c", "cd /app && source venv/bin/activate && exec python -u main.py"],
             network=bot_network_name,  # Use isolated bot network (no internet access)
             tmpfs={
-                "/tmp": "size=512M,mode=1777",  # Writable /tmp for Chrome
-                "/dev/shm": "size=2g",  # Shared memory for Chrome (prevents crashes)
+                "/tmp": "size=512M,mode=1777",
+                "/dev/shm": "size=2g",
+                "/var/tmp": "size=256M,mode=1777",
             },
             mem_limit="8g",  # Memory limit - Chrome needs more memory
             memswap_limit="8g",  # Disable swap
@@ -188,7 +203,7 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
             remove=True,
             detach=False,
             shm_size="4g",  # Shared memory size for Chrome
-            # read_only=True,  # Read-only root filesystem - disabled for Chrome compatibility
+            read_only=True,  # Read-only root filesystem - disabled for Chrome compatibility
         )
 
         logger.success("Bot execution completed successfully")

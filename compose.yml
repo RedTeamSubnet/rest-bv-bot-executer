@@ -18,7 +18,6 @@ services:
     volumes:
       - "api-logs:${VM_RUNNER_API_LOGS_DIR:-/var/log/rest.vm-runner}"
       - "api-data:${VM_RUNNER_API_DATA_DIR:-/var/lib/rest.vm-runner}"
-      - "/var/run/docker.sock:/var/run/docker.sock"
     ports:
       - "${VM_RUNNER_API_PORT:-8000}:${VM_RUNNER_API_PORT:-8000}"
     tty: true
@@ -30,6 +29,5 @@ networks:
     driver: bridge
 
 volumes:
-
   api-logs:
   api-data:
