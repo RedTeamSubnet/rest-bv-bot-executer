@@ -192,7 +192,7 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
             name="bot_container",
             environment={
                 "HBC_WEB_URL": web_url,
-                "HBC_SESSION_COUNT": 3,
+                "HBC_SESSION_COUNT": session_count,
                 "PYTHONDONTWRITEBYTECODE": "1",
                 "PYTHONPYCACHEPREFIX": "/tmp/pycache",
             },
