@@ -26,9 +26,3 @@ RUN sudo chown -R seluser:seluser /app && \
 
 # Copy application source code
 COPY --chown=seluser:seluser ./src .
-# RUN sudo chown -R seluser:seluser /app
-
-
-COPY ./scripts/docker-entrypoint.sh /docker-entrypoint.sh
-RUN sudo chmod +x /docker-entrypoint.sh && sudo chown seluser:seluser /docker-entrypoint.sh
-ENTRYPOINT ["/docker-entrypoint.sh"]
