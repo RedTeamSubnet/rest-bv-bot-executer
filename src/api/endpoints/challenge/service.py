@@ -131,11 +131,20 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
     # Write Dockerfile
     with open(_BOT_DOCKERFILE_PATH, "w") as f:
         f.write("\n".join(filtered_lines))
-        f.write(f"\nCOPY --chown=seluser:seluser /src/main.py /app/main.py\n")
-        f.write(f"COPY --chown=seluser:seluser /src/constants.py /app/constants.py\n")
-        f.write(f"COPY --chown=seluser:seluser /src/core/bot.py /app/core/bot.py\n")
+        f.write("\nARG ORIGINAL_USER\n")
+        f.write("RUN ORIGINAL_USER=$(whoami) && echo \"Original user: $ORIGINAL_USER\" && echo $ORIGINAL_USER > /tmp/original_user\n")
+        f.write("USER root\n")
+        f.write(f"\nCOPY src/main.py /app/main.py\n")
+        f.write("RUN chmod 0644 /app/main.py\n")
+        f.write(f"COPY src/constants.py /app/constants.py\n")
+        f.write("RUN chmod 0644 /app/constants.py\n")
+        f.write(f"COPY src/core/bot.py /app/core/bot.py\n")
+        f.write("RUN chmod 0644 /app/core/bot.py\n")
+        f.write("RUN chmod -R a+rX /app\n")
+        f.write("RUN ORIGINAL_USER=$(cat /tmp/original_user) && useradd -m $ORIGINAL_USER || true\n")
+        f.write("USER ${ORIGINAL_USER}\n")
         f.write("\nENTRYPOINT [\"/bin/bash\", \"-c\", \"cd /app && source venv/bin/activate && exec python -u main.py\"]\n")
-    # Build Docker image
+
     logger.info("Building Docker image...")
     docker_client = docker.from_env()
 
