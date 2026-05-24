@@ -89,7 +89,12 @@ def cleanup_bot_network(docker_client: docker.DockerClient, network_name: str) -
 
 
 @validate_call
-def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
+def build_and_run_bot(
+    bot_py: str,
+    dockerfile: str,
+    session_count: int,
+    score_job_id: str = "",
+) -> Dict:
     """
     Build and run bot container with provided bot.py and Dockerfile.
 
@@ -97,6 +102,9 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
         bot_py: Bot Python source code
         dockerfile: Dockerfile content (without ENTRYPOINT, will be added)
         session_count: Number of sessions to run
+        score_job_id: Optional caller-supplied job ID. When set the bot
+            container is named bot_container_<id> and tagged with docker
+            label score_job_id=<id> for log streaming.
 
     Returns:
         Dict containing execution results
@@ -118,7 +126,9 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
     source_files = [
         f"{_BOT_DIR}/src/main.py",
         f"{_BOT_DIR}/src/constants.py",
-        f"{_BOT_DIR}/src/core/bot.py"
+        f"{_BOT_DIR}/src/driver.py",
+        f"{_BOT_DIR}/src/core/__init__.py",
+        f"{_BOT_DIR}/src/core/bot.py",
     ]
 
     for file_path in source_files:
@@ -138,6 +148,10 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
         f.write("RUN chmod 0644 /app/main.py\n")
         f.write(f"COPY src/constants.py /app/constants.py\n")
         f.write("RUN chmod 0644 /app/constants.py\n")
+        f.write(f"COPY src/driver.py /app/driver.py\n")
+        f.write("RUN chmod 0644 /app/driver.py\n")
+        f.write(f"COPY src/core/__init__.py /app/core/__init__.py\n")
+        f.write("RUN chmod 0644 /app/core/__init__.py\n")
         f.write(f"COPY src/core/bot.py /app/core/bot.py\n")
         f.write("RUN chmod 0644 /app/core/bot.py\n")
         f.write("RUN chmod -R a+rX /app\n")
@@ -179,22 +193,35 @@ def build_and_run_bot(bot_py: str, dockerfile: str, session_count: int) -> Dict:
 
         logger.info(f"Bot will connect to: {web_url}")
 
-        # chek if bot_container exists and remove it
+        # Derive a deterministic container name + labels so external callers can
+        # locate this bot container (e.g. for log streaming) via docker ps
+        # --filter label=score_job_id=<id>. When no score_job_id is supplied we
+        # fall back to the legacy "bot_container" name for backward compatibility.
+        bot_container_name = (
+            f"bot_container_{score_job_id}" if score_job_id else "bot_container"
+        )
+        bot_container_labels = {"type": "bot-executor-run"}
+        if score_job_id:
+            bot_container_labels["score_job_id"] = score_job_id
+
+        # check if a container with this name exists and remove it
         try:
-            existing_container = docker_client.containers.get("bot_container")
-            logger.info("Removing existing bot_container...")
+            existing_container = docker_client.containers.get(bot_container_name)
+            logger.info(f"Removing existing container: {bot_container_name}")
             existing_container.remove(force=True)
         except docker.errors.NotFound:
             pass
 
         container = docker_client.containers.run(
             image_tag,
-            name="bot_container",
+            name=bot_container_name,
+            labels=bot_container_labels,
             environment={
                 "HBC_WEB_URL": web_url,
                 "HBC_SESSION_COUNT": session_count,
                 "PYTHONDONTWRITEBYTECODE": "1",
                 "PYTHONPYCACHEPREFIX": "/tmp/pycache",
+                "SCORE_JOB_ID": score_job_id,
             },
             entrypoint=["/bin/bash", "-c", "cd /app && source venv/bin/activate && exec python -u main.py"],
             network=bot_network_name,  # Use isolated bot network (no internet access)

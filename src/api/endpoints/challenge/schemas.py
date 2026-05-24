@@ -42,6 +42,15 @@ class BuildAndRunRequest(BaseModel):
         le=10,
         description="Number of sessions to run the bot.",
     )
+    score_job_id: str = Field(
+        default="",
+        max_length=128,
+        description=(
+            "Optional caller-supplied job ID. When set the bot container is named "
+            "bot_container_<id> and tagged with docker label score_job_id=<id> so "
+            "callers can locate and stream its logs."
+        ),
+    )
 
     @field_validator("bot_py", mode="after")
     @classmethod

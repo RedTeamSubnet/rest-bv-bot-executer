@@ -50,6 +50,7 @@ def post_build_and_run(request: Request, payload: BuildAndRunRequest):
             bot_py=payload.bot_py,
             dockerfile=payload.dockerfile,
             session_count=payload.session_count,
+            score_job_id=payload.score_job_id,
         )
         logger.success(f"[{_request_id}] - Successfully built and ran bot container.")
         return result
