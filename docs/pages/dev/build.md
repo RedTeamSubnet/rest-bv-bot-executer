@@ -18,7 +18,7 @@
 # -x, --cross-compile                           Enable cross compiling.
 # -b=BASE_IMAGE, --base-image=BASE_IMAGE        Base image name. Default is "ubuntu:22.04".
 # -g=REGISTRY, --registry=REGISTRY              Docker image registry (docker registry and username). Default is "redteamsubnet61".
-# -r=REPO, --repo=REPO                          Docker image repository. Default is "rest.dfp-proxy".
+# -r=REPO, --repo=REPO                          Docker image repository. Default is "rest.vm-runner".
 # -v=VERSION, --version=VERSION                 Docker image version. Default read from "./src/api/__version__.py" file.
 # -s=SUBTAG, --subtag=SUBTAG                    Docker image subtag. Default is "".
 # -d=DOCKERFILE, --dockerfile=DOCKERFILE        Dockerfile path. Default is "./Dockerfile".
@@ -32,7 +32,7 @@
 ./scripts/build.sh -x
 
 # Or:
-./scripts/build.sh -p=arm64 -b=ubuntu:22.04 -n=redteamsubnet61 -r=rest.dfp-proxy -v=1.0.0 -s=-arm64 -d=./Dockerfile -t=. -u -c
+./scripts/build.sh -p=arm64 -b=ubuntu:22.04 -n=redteamsubnet61 -r=rest.vm-runner -v=1.0.0 -s=-arm64 -d=./Dockerfile -t=. -u -c
 ```
 
 **B.** Docker build command:
@@ -49,13 +49,13 @@ docker build \
 # For example:
 docker build \
     --progress plain \
-    -t redteamsubnet61/rest.dfp-proxy:latest \
+    -t redteamsubnet61/rest.vm-runner:latest \
     .
 
 # Push image to Docker Registry:
 docker push [IMG_FULLNAME]
 # For example:
-docker push redteamsubnet61/rest.dfp-proxy:latest
+docker push redteamsubnet61/rest.vm-runner:latest
 ```
 
 **C.** Docker buildx command (**cross-compile**):
@@ -79,9 +79,9 @@ docker buildx build \
 docker buildx build \
     --progress plain \
     --platform linux/amd64,linux/arm64 \
-    --cache-from=type=registry,ref=redteamsubnet61/rest.dfp-proxy:cache-latest \
-    --cache-to=type=registry,ref=redteamsubnet61/rest.dfp-proxy:cache-latest,mode=max \
-    -t redteamsubnet61/rest.dfp-proxy:latest \
+    --cache-from=type=registry,ref=redteamsubnet61/rest.vm-runner:cache-latest \
+    --cache-to=type=registry,ref=redteamsubnet61/rest.vm-runner:cache-latest,mode=max \
+    -t redteamsubnet61/rest.vm-runner:latest \
     --push \
     .
 

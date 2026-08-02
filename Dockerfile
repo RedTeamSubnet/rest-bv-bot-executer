@@ -4,21 +4,21 @@
 ARG BASE_IMAGE=ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG DFP_PROXY_API_SLUG="rest.dfp-proxy"
+ARG MDM_PROXY_API_SLUG="rest.vm-runner"
 
 
 ## Here is the builder image:
 FROM ${BASE_IMAGE} AS builder
 
 ARG DEBIAN_FRONTEND
-ARG DFP_PROXY_API_SLUG
+ARG MDM_PROXY_API_SLUG
 
 # ARG USE_GPU=false
 ARG PYTHON_VERSION=3.10
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-WORKDIR "/usr/src/${DFP_PROXY_API_SLUG}"
+WORKDIR "/usr/src/${MDM_PROXY_API_SLUG}"
 
 RUN --mount=type=cache,target=/opt/conda/pkgs,sharing=private \
 	--mount=type=cache,target=/root/.cache,sharing=locked \
@@ -75,30 +75,30 @@ RUN	--mount=type=cache,target=/root/.cache,sharing=locked \
 FROM ${BASE_IMAGE} AS base
 
 ARG DEBIAN_FRONTEND
-ARG DFP_PROXY_API_SLUG
+ARG MDM_PROXY_API_SLUG
 
-ARG DFP_PROXY_HOME_DIR="/app"
-ARG DFP_PROXY_API_DIR="${DFP_PROXY_HOME_DIR}/${DFP_PROXY_API_SLUG}"
-ARG DFP_PROXY_API_DATA_DIR="/var/lib/${DFP_PROXY_API_SLUG}"
-ARG DFP_PROXY_API_LOGS_DIR="/var/log/${DFP_PROXY_API_SLUG}"
-ARG DFP_PROXY_API_TMP_DIR="/tmp/${DFP_PROXY_API_SLUG}"
-# ARG DFP_PROXY_API_MODELS_DIR="${DFP_PROXY_API_DATA_DIR}/models"
-ARG DFP_PROXY_API_PORT=8000
+ARG MDM_PROXY_HOME_DIR="/app"
+ARG MDM_PROXY_API_DIR="${MDM_PROXY_HOME_DIR}/${MDM_PROXY_API_SLUG}"
+ARG MDM_PROXY_API_DATA_DIR="/var/lib/${MDM_PROXY_API_SLUG}"
+ARG MDM_PROXY_API_LOGS_DIR="/var/log/${MDM_PROXY_API_SLUG}"
+ARG MDM_PROXY_API_TMP_DIR="/tmp/${MDM_PROXY_API_SLUG}"
+# ARG MDM_PROXY_API_MODELS_DIR="${MDM_PROXY_API_DATA_DIR}/models"
+ARG MDM_PROXY_API_PORT=8000
 ## IMPORTANT!: Get hashed password from build-arg!
-## echo "DFP_PROXY_USER_PASSWORD123" | openssl passwd -5 -stdin
+## echo "MDM_PROXY_USER_PASSWORD123" | openssl passwd -5 -stdin
 ARG HASH_PASSWORD="\$5\$UN1S7dZEa/qDoijJ\$hJ5o.Wpp5aP2kp.46Y7lWgcsRE8/oRLVswU6Swi13fB"
 ARG UID=1000
 ARG GID=11000
 ARG USER=dfp-user
 ARG GROUP=dfg-group
 
-ENV DFP_PROXY_API_SLUG="${DFP_PROXY_API_SLUG}" \
-	DFP_PROXY_HOME_DIR="${DFP_PROXY_HOME_DIR}" \
-	DFP_PROXY_API_DIR="${DFP_PROXY_API_DIR}" \
-	DFP_PROXY_API_DATA_DIR="${DFP_PROXY_API_DATA_DIR}" \
-	DFP_PROXY_API_LOGS_DIR="${DFP_PROXY_API_LOGS_DIR}" \
-	DFP_PROXY_API_TMP_DIR="${DFP_PROXY_API_TMP_DIR}" \
-	DFP_PROXY_API_PORT=${DFP_PROXY_API_PORT} \
+ENV MDM_PROXY_API_SLUG="${MDM_PROXY_API_SLUG}" \
+	MDM_PROXY_HOME_DIR="${MDM_PROXY_HOME_DIR}" \
+	MDM_PROXY_API_DIR="${MDM_PROXY_API_DIR}" \
+	MDM_PROXY_API_DATA_DIR="${MDM_PROXY_API_DATA_DIR}" \
+	MDM_PROXY_API_LOGS_DIR="${MDM_PROXY_API_LOGS_DIR}" \
+	MDM_PROXY_API_TMP_DIR="${MDM_PROXY_API_TMP_DIR}" \
+	MDM_PROXY_API_PORT=${MDM_PROXY_API_PORT} \
 	UID=${UID} \
 	GID=${GID} \
 	USER=${USER} \
@@ -107,7 +107,7 @@ ENV DFP_PROXY_API_SLUG="${DFP_PROXY_API_SLUG}" \
 	PYTHONUNBUFFERED=1 \
 	PATH="/opt/conda/bin:${PATH}"
 
-# ENV DFP_PROXY_API_MODELS_DIR="${DFP_PROXY_API_MODELS_DIR}"
+# ENV MDM_PROXY_API_MODELS_DIR="${MDM_PROXY_API_MODELS_DIR}"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -121,6 +121,7 @@ RUN rm -rfv /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /root/.cache/*
 		sudo \
 		locales \
 		tzdata \
+		docker.io \
 		procps \
 		iputils-ping \
 		iproute2 \
@@ -147,12 +148,12 @@ RUN rm -rfv /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /root/.cache/*
 	echo ". /opt/conda/etc/profile.d/conda.sh" >> "/home/${USER}/.bashrc" && \
 	echo "conda activate base" >> "/home/${USER}/.bashrc" && \
 	rm -rfv /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /root/.cache/* "/home/${USER}/.cache/*" && \
-	mkdir -pv "${DFP_PROXY_API_DIR}" "${DFP_PROXY_API_DATA_DIR}" "${DFP_PROXY_API_LOGS_DIR}" "${DFP_PROXY_API_TMP_DIR}" && \
-	chown -Rc "${USER}:${GROUP}" "${DFP_PROXY_HOME_DIR}" "${DFP_PROXY_API_DATA_DIR}" "${DFP_PROXY_API_LOGS_DIR}" "${DFP_PROXY_API_TMP_DIR}" && \
-	find "${DFP_PROXY_API_DIR}" "${DFP_PROXY_API_DATA_DIR}" -type d -exec chmod -c 770 {} + && \
-	find "${DFP_PROXY_API_DIR}" "${DFP_PROXY_API_DATA_DIR}" -type d -exec chmod -c ug+s {} + && \
-	find "${DFP_PROXY_API_LOGS_DIR}" "${DFP_PROXY_API_TMP_DIR}" -type d -exec chmod -c 775 {} + && \
-	find "${DFP_PROXY_API_LOGS_DIR}" "${DFP_PROXY_API_TMP_DIR}" -type d -exec chmod -c +s {} +
+	mkdir -pv "${MDM_PROXY_API_DIR}" "${MDM_PROXY_API_DATA_DIR}" "${MDM_PROXY_API_LOGS_DIR}" "${MDM_PROXY_API_TMP_DIR}" && \
+	chown -Rc "${USER}:${GROUP}" "${MDM_PROXY_HOME_DIR}" "${MDM_PROXY_API_DATA_DIR}" "${MDM_PROXY_API_LOGS_DIR}" "${MDM_PROXY_API_TMP_DIR}" && \
+	find "${MDM_PROXY_API_DIR}" "${MDM_PROXY_API_DATA_DIR}" -type d -exec chmod -c 770 {} + && \
+	find "${MDM_PROXY_API_DIR}" "${MDM_PROXY_API_DATA_DIR}" -type d -exec chmod -c ug+s {} + && \
+	find "${MDM_PROXY_API_LOGS_DIR}" "${MDM_PROXY_API_TMP_DIR}" -type d -exec chmod -c 775 {} + && \
+	find "${MDM_PROXY_API_LOGS_DIR}" "${MDM_PROXY_API_TMP_DIR}" -type d -exec chmod -c +s {} +
 
 ENV LANG=en_US.UTF-8 \
 	LANGUAGE=en_US.UTF-8 \
@@ -164,16 +165,16 @@ COPY --from=builder --chown=${UID}:${GID} /opt/conda /opt/conda
 ## Here is the final image:
 FROM base AS app
 
-WORKDIR "${DFP_PROXY_API_DIR}"
-COPY --chown=${UID}:${GID} ./src ${DFP_PROXY_API_DIR}
+WORKDIR "${MDM_PROXY_API_DIR}"
+COPY --chown=${UID}:${GID} ./src ${MDM_PROXY_API_DIR}
 COPY --chown=${UID}:${GID} --chmod=770 ./scripts/docker/*.sh /usr/local/bin/
 
-# VOLUME ["${DFP_PROXY_API_DATA_DIR}"]
-# EXPOSE ${DFP_PROXY_API_PORT}
+# VOLUME ["${MDM_PROXY_API_DATA_DIR}"]
+# EXPOSE ${MDM_PROXY_API_PORT}
 
 USER ${UID}:${GID}
 # HEALTHCHECK --start-period=30s --start-interval=1s --interval=5m --timeout=5s --retries=3 \
-# 	CMD curl -f http://localhost:${DFP_PROXY_API_PORT}/api/v${DFP_PROXY_API_VERSION:-1}/ping || exit 1
+# 	CMD curl -f http://localhost:${MDM_PROXY_API_PORT}/api/v${MDM_PROXY_API_VERSION:-1}/ping || exit 1
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-# CMD ["-b", "uvicorn main:app --host=0.0.0.0 --port=${DFP_PROXY_API_PORT:-8000} --no-access-log --no-server-header --proxy-headers --forwarded-allow-ips='*'"]
+# CMD ["-b", "uvicorn main:app --host=0.0.0.0 --port=${MDM_PROXY_API_PORT:-8000} --no-access-log --no-server-header --proxy-headers --forwarded-allow-ips='*'"]

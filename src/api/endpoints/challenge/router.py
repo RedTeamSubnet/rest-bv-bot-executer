@@ -1,121 +1,126 @@
 # -*- coding: utf-8 -*-
 
-from fastapi.responses import HTMLResponse
-from fastapi import APIRouter, HTTPException, Request, Depends, Query, Body
-
-from api.core.constants import ErrorCodeEnum, ALPHANUM_HYPHEN_REGEX
-from api.core.schemas import BaseResPM
-from api.core.responses import BaseResponse
+from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Request
+from api.core.constants import ErrorCodeEnum
 from api.core.exceptions import BaseHTTPException
-from api.core.dependencies.auth import auth_api_key
 from api.logger import logger
 
 from . import service
-from .schemas import Fingerprinter
-
+from .schemas import BuildRequest, RunSimpleBotRequest, RunWebRequest
 
 router = APIRouter(tags=["Challenge"])
 
 
-@router.post(
-    "/_fp-js",
-    summary="Save miner fingerprinter",
-    description="This endpoint retrieves the miner fingerprinter from the challenger container.",
-    response_model=BaseResPM,
-    responses={401: {}, 422: {}},
-    dependencies=[Depends(auth_api_key)],
-)
-def post_fingerprinter(request: Request, fingerprinter: Fingerprinter):
-
-    _request_id = request.state.request_id
-    logger.info(f"[{_request_id}] - Saving miner fingerprinter...")
-    try:
-        service.save_fingerprinter(fingerprinter=fingerprinter)
-        logger.success(f"[{_request_id}] - Successfully saved miner fingerprinter.")
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception(f"[{_request_id}] - Failed to save miner fingerprinter!")
-        raise BaseHTTPException(
-            error_enum=ErrorCodeEnum.INTERNAL_SERVER_ERROR,
-            message="Failed to save miner fingerprinter!",
-        )
-
-    _response = BaseResponse(
-        request=request,
-        message="Successfully saved miner fingerprinter.",
-    )
-    return _response
-
-
 @router.get(
-    "/_web",
-    summary="Serves the webpage",
-    description="This endpoint serves the webpage for the challenge.",
-    responses={422: {}},
-    response_class=HTMLResponse,
+    "/health",
+    summary="Health check",
+    description="Check if the VM runner service is healthy and running.",
+    response_class=JSONResponse,
 )
-def get_web(request: Request, order_id: int = Query(..., ge=0, lt=1000000)):
-
+def get_health(request: Request):
     _request_id = request.state.request_id
-    logger.info(f"[{_request_id}] - Serving webpage for order ID {order_id}...")
-    try:
-        _html_response = service.get_web(request=request)
-        logger.success(
-            f"[{_request_id}] - Successfully served webpage for order ID {order_id}."
-        )
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception(
-            f"[{_request_id}] - Failed to serve webpage for order ID {order_id}!"
-        )
-        raise BaseHTTPException(
-            error_enum=ErrorCodeEnum.INTERNAL_SERVER_ERROR,
-            message="Failed to serve webpage!",
-        )
+    logger.info(f"[{_request_id}] - Health check...")
 
-    return _html_response
+    return {
+        "status": "healthy",
+        "service": "vm-runner",
+        "message": "VM runner is up and running",
+    }
 
 
 @router.post(
-    "/fingerprint",
-    summary="Submit the fingerprint",
-    description="This endpoint receives the fingerprint data and submit it to challenger service.",
-    response_model=BaseResPM,
-    responses={422: {}},
+    "/build",
+    summary="Build miner container image",
+    description="Receives bot.py and Dockerfile and builds the miner image.",
+    response_class=JSONResponse,
+    responses={422: {}, 500: {}},
 )
-def post_fingerprint(
-    request: Request,
-    order_id: int = Body(..., ge=0, lt=1000000),
-    fingerprint: str = Body(
-        ..., min_length=2, max_length=128, pattern=ALPHANUM_HYPHEN_REGEX
-    ),
-):
-
+def post_build(request: Request, payload: BuildRequest):
     _request_id = request.state.request_id
-    logger.info(f"[{_request_id}] - Submitting fingerprint for order ID {order_id}...")
+    logger.info(f"[{_request_id}] - Building miner image...")
+
     try:
-        service.submit_fingerprint(order_id=order_id, fingerprint=fingerprint)
-        logger.success(
-            f"[{_request_id}] - Successfully submitted fingerprint for order ID {order_id}."
+        result = service.build_bot_image(
+            bot_py=payload.bot_py,
+            dockerfile=payload.dockerfile,
+            score_job_id=payload.score_job_id,
         )
+        logger.success(f"[{_request_id}] - Successfully built miner image.")
+        return result
     except HTTPException:
         raise
-    except Exception:
-        logger.exception(
-            f"[{_request_id}] - Failed to submit fingerprint for order ID {order_id}!"
-        )
+    except Exception as err:
+        logger.exception(f"[{_request_id}] - Failed to build miner image!")
+        error_msg = str(err)
+        if len(error_msg) > 200:
+            error_msg = error_msg[:200] + "... (truncated)"
         raise BaseHTTPException(
             error_enum=ErrorCodeEnum.INTERNAL_SERVER_ERROR,
-            message="Failed to submit fingerprint!",
+            message=f"Failed to build miner image: {error_msg}",
         )
 
-    _response = BaseResponse(
-        request=request,
-        message="Successfully submitted fingerprint.",
-    )
-    return _response
+
+@router.post(
+    "/run-simple-bot",
+    summary="Run miner image against simple bot page",
+    description="Runs the already-built miner image against the simple bot page.",
+    response_class=JSONResponse,
+    responses={422: {}, 500: {}},
+)
+def post_run_simple_bot(request: Request, payload: RunSimpleBotRequest):
+    _request_id = request.state.request_id
+    logger.info(f"[{_request_id}] - Running simple bot phase...")
+
+    try:
+        result = service.run_simple_bot(
+            score_job_id=payload.score_job_id,
+            timeout_sec=payload.timeout_sec,
+        )
+        logger.success(f"[{_request_id}] - Successfully ran simple bot phase.")
+        return result
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception(f"[{_request_id}] - Failed to run simple bot phase!")
+        error_msg = str(err)
+        if len(error_msg) > 200:
+            error_msg = error_msg[:200] + "... (truncated)"
+        raise BaseHTTPException(
+            error_enum=ErrorCodeEnum.INTERNAL_SERVER_ERROR,
+            message=f"Failed to run simple bot phase: {error_msg}",
+        )
+
+
+@router.post(
+    "/run-web",
+    summary="Run miner image against challenge web page",
+    description="Runs the already-built miner image against the challenge _web page.",
+    response_class=JSONResponse,
+    responses={422: {}, 500: {}},
+)
+def post_run_web(request: Request, payload: RunWebRequest):
+    _request_id = request.state.request_id
+    logger.info(f"[{_request_id}] - Running challenge web phase...")
+
+    try:
+        result = service.run_web_bot(
+            session_count=payload.session_count,
+            score_job_id=payload.score_job_id,
+        )
+        logger.success(f"[{_request_id}] - Successfully ran challenge web phase.")
+        return result
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception(f"[{_request_id}] - Failed to run challenge web phase!")
+        error_msg = str(err)
+        if len(error_msg) > 200:
+            error_msg = error_msg[:200] + "... (truncated)"
+        raise BaseHTTPException(
+            error_enum=ErrorCodeEnum.INTERNAL_SERVER_ERROR,
+            message=f"Failed to run challenge web phase: {error_msg}",
+        )
 
 
 __all__ = [

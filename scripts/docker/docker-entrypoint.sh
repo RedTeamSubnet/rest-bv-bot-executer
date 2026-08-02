@@ -2,12 +2,12 @@
 set -euo pipefail
 
 
-echo "INFO: Running '${DFP_PROXY_API_SLUG}' docker-entrypoint.sh..."
+echo "INFO: Running '${MDM_PROXY_API_SLUG}' docker-entrypoint.sh..."
 
 _doStart()
 {
 	exec python -u ./main.py || exit 2
-	# exec uvicorn main:app --host=0.0.0.0 --port=${DFP_PROXY_API_PORT:-8000} --no-access-log --no-server-header --proxy-headers --forwarded-allow-ips='*' || exit 2
+	# exec uvicorn main:app --host=0.0.0.0 --port=${MDM_PROXY_API_PORT:-8000} --no-access-log --no-server-header --proxy-headers --forwarded-allow-ips='*' || exit 2
 	exit 0
 }
 
@@ -15,14 +15,14 @@ _doStart()
 main()
 {
 	umask 0002 || exit 2
-	find "${DFP_PROXY_HOME_DIR}" "${DFP_PROXY_API_DATA_DIR}" "${DFP_PROXY_API_LOGS_DIR}" "${DFP_PROXY_API_TMP_DIR}" -path "*/modules" -prune -o -name ".env" -o -print0 | sudo xargs -0 chown -c "${USER}:${GROUP}" || exit 2
-	find "${DFP_PROXY_API_DIR}" "${DFP_PROXY_API_DATA_DIR}" -type d -not -path "*/modules/*" -exec chmod 770 {} + || exit 2
-	find "${DFP_PROXY_API_DIR}" "${DFP_PROXY_API_DATA_DIR}" -type f -not -path "*/modules/*" -exec chmod 660 {} + || exit 2
-	find "${DFP_PROXY_API_DIR}" "${DFP_PROXY_API_DATA_DIR}" -type d -not -path "*/modules/*" -exec chmod ug+s {} + || exit 2
-	find "${DFP_PROXY_API_LOGS_DIR}" "${DFP_PROXY_API_TMP_DIR}" -type d -exec chmod 775 {} + || exit 2
-	find "${DFP_PROXY_API_LOGS_DIR}" "${DFP_PROXY_API_TMP_DIR}" -type f -exec chmod 664 {} + || exit 2
-	find "${DFP_PROXY_API_LOGS_DIR}" "${DFP_PROXY_API_TMP_DIR}" -type d -exec chmod +s {} + || exit 2
-	chmod ug+x "${DFP_PROXY_API_DIR}/main.py" || exit 2
+	find "${MDM_PROXY_HOME_DIR}" "${MDM_PROXY_API_DATA_DIR}" "${MDM_PROXY_API_LOGS_DIR}" "${MDM_PROXY_API_TMP_DIR}" -path "*/modules" -prune -o -name ".env" -o -print0 | sudo xargs -0 chown -c "${USER}:${GROUP}" || exit 2
+	find "${MDM_PROXY_API_DIR}" "${MDM_PROXY_API_DATA_DIR}" -type d -not -path "*/modules/*" -exec chmod 770 {} + || exit 2
+	find "${MDM_PROXY_API_DIR}" "${MDM_PROXY_API_DATA_DIR}" -type f -not -path "*/modules/*" -exec chmod 660 {} + || exit 2
+	find "${MDM_PROXY_API_DIR}" "${MDM_PROXY_API_DATA_DIR}" -type d -not -path "*/modules/*" -exec chmod ug+s {} + || exit 2
+	find "${MDM_PROXY_API_LOGS_DIR}" "${MDM_PROXY_API_TMP_DIR}" -type d -exec chmod 775 {} + || exit 2
+	find "${MDM_PROXY_API_LOGS_DIR}" "${MDM_PROXY_API_TMP_DIR}" -type f -exec chmod 664 {} + || exit 2
+	find "${MDM_PROXY_API_LOGS_DIR}" "${MDM_PROXY_API_TMP_DIR}" -type d -exec chmod +s {} + || exit 2
+	chmod ug+x "${MDM_PROXY_API_DIR}/main.py" || exit 2
 	# echo "${USER} ALL=(ALL) ALL" | sudo tee -a "/etc/sudoers.d/${USER}" > /dev/null || exit 2
 	echo ""
 

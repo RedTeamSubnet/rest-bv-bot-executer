@@ -24,9 +24,9 @@ api:
       private_key_fname: "private_key.pem"
       public_key_fname: "public_key.pem"
     jwt:
-      secret: "DFP_PROXY_JWT_SECRET123" # This should be a random string, and read from an environment variable!
+      secret: "MDM_PROXY_JWT_SECRET123" # This should be a random string, and read from an environment variable!
       algorithm: "HS256"
     password:
-      pepper: "DFP_PROXY_PASSWORD_PEPPER123" # This should be a random string, and read from an environment variable!
+      pepper: "MDM_PROXY_PASSWORD_PEPPER123" # This should be a random string, and read from an environment variable!
       min_length: 8
       max_length: 128

@@ -505,7 +505,7 @@ results/
 output/
 outputs/
 .benchmarks/
-rest.dfp-proxy/
+rest.vm-runner/
 
 # Files:
 log
@@ -521,7 +521,7 @@ results
 output
 outputs
 .benchmarks
-rest.dfp-proxy
+rest.vm-runner
 env
 *.bak
 pm2-process.json

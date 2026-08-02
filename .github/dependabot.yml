@@ -1,0 +1,20 @@
+version: 2
+registries:
+  dockerhub:
+    type: docker-registry
+    url: https://registry.hub.docker.com
+    username: ${{ secrets.DOCKERHUB_USERNAME }}
+    password: ${{ secrets.DOCKERHUB_TOKEN }}
+updates:
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    registries:
+      - dockerhub
+    labels:
+      - "dependency"
+      - "docker"
+    ignore:
+      - dependency-name: "mongo"
+    open-pull-requests-limit: 10
+    schedule:
+      interval: "daily"

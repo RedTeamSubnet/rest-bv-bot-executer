@@ -2,8 +2,7 @@
 
 from enum import Enum
 
-
-ENV_PREFIX = "DFP_"
+ENV_PREFIX = "MDM_"
 ENV_PREFIX_API = f"{ENV_PREFIX}PROXY_API_"
 
 

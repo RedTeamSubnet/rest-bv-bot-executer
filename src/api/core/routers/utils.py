@@ -72,7 +72,6 @@ def get_health(
             _device["ip"] = str(_ip)
             logger.success(f"Device with IP '{_ip}' is connected.")
         else:
-            _status_code = 503
             _message = "Some devices are not connected."
             _device["status"] = "FAIL"
             _device["message"] = f"Device with '{_ip}' IP is not connected!"
@@ -84,7 +83,6 @@ def get_health(
     return BaseResponse(
         request=request,
         content=_data,
-        status_code=_status_code,
         message=_message,
         headers={
             "Cache-Control": "no-cache, no-store, must-revalidate",

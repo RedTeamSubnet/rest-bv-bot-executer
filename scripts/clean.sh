@@ -22,7 +22,7 @@ fi
 
 ## --- Variables --- ##
 # Load from envrionment variables:
-PROJECT_SLUG="${PROJECT_SLUG:-rest.dfp-proxy}"
+PROJECT_SLUG="${PROJECT_SLUG:-rest.vm-runner}"
 
 # Flags:
 _IS_ALL=false
