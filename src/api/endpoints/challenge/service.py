@@ -169,7 +169,7 @@ def _run_miner_container(
             "cap_drop": ["NET_RAW", "NET_ADMIN"],
             "security_opt": ["no-new-privileges"],
             "detach": True,
-            # "auto_remove": True,
+            "auto_remove": True,
             "shm_size": "4g",
             "read_only": False,
             "entrypoint": ["python3"],
@@ -184,7 +184,7 @@ def _run_miner_container(
             except docker.errors.APIError as exc:
                 if container is not None:
                     try:
-                        # container.remove(force=True)
+                        container.remove(force=True)
                         pass
                     except docker.errors.NotFound:
                         pass
@@ -193,7 +193,7 @@ def _run_miner_container(
                     raise
                 if attempt == 2:
                     raise
-                # remove_existing_container()
+                remove_existing_container()
         if container is None:
             raise RuntimeError(f"Could not start bot container '{container_name}'")
         wait_result = container.wait()
