@@ -1,72 +1,64 @@
 name: 2. Build and Publish
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: ["1. Bump Version"]
     types:
       - completed
-    branches:
-      - main
   push:
     tags:
       - "v*.*.*-*"
 
 env:
-  _VERSION: 0.0.0-250101
+  _VERSION: 0.0.0
+  IMAGE_NAME: bv-bot-runner
 
 jobs:
   build_publish:
     name: Build and Publish
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Get latest version
+        run: |
+          git pull origin main
+          echo "Current version: v$(./scripts/get-version.sh)"
+
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          ## Latest version causes segfault:
-          ## https://github.com/docker/setup-qemu-action/issues/198
-          image: tonistiigi/binfmt:qemu-v7.0.0-28
-      - name: Set up docker buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to docker hub
-        uses: docker/login-action@v3
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Get version
-        run: echo "_VERSION=$(./scripts/get-version.sh)" >> ${GITHUB_ENV}
-      # - name: Build and export
-      #   uses: docker/build-push-action@v6
-      #   with:
-      #     context: .
-      #     build-args: |
-      #       "HASH_PASSWORD=${{ secrets.DOCKER_UID_HASH_PASSWORD }}"
-      #     load: true
-      #     cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:cache-latest
-      #     tags: ${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:test
-      # - name: Test docker image
-      #   run: |
-      #     docker run --rm -dt -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:test
-      #     sleep 3
-      #     curl -s http://localhost:8000/api/v1/ping | grep "Pong"
+        run: echo "_VERSION=$(./scripts/get-version.sh)" >> "$GITHUB_ENV"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           build-args: |
-            "HASH_PASSWORD=${{ secrets.DOCKER_UID_HASH_PASSWORD }}"
-          # platforms: linux/amd64
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:cache-latest
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:cache-latest,mode=max
+            HASH_PASSWORD=${{ secrets.DOCKER_UID_HASH_PASSWORD }}
+          platforms: linux/amd64
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:cache-latest
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:cache-latest,mode=max
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:${{ env._VERSION }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env._VERSION }}
           push: true
+
       - name: Trigger release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
