@@ -22,7 +22,7 @@ fi
 
 ## --- Variables --- ##
 # Load from envrionment variables:
-PROJECT_SLUG="${PROJECT_SLUG:-rest.vm-runner}"
+PROJECT_SLUG="${PROJECT_SLUG:-rest.bv-vm-runner}"
 
 # Flags:
 _IS_ALL=false

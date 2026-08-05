@@ -46,11 +46,11 @@ jobs:
       #     build-args: |
       #       "HASH_PASSWORD=${{ secrets.DOCKER_UID_HASH_PASSWORD }}"
       #     load: true
-      #     cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/rest.vm-runner:cache-latest
-      #     tags: ${{ secrets.DOCKERHUB_USERNAME }}/rest.vm-runner:test
+      #     cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:cache-latest
+      #     tags: ${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:test
       # - name: Test docker image
       #   run: |
-      #     docker run --rm -dt -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/rest.vm-runner:test
+      #     docker run --rm -dt -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:test
       #     sleep 3
       #     curl -s http://localhost:8000/api/v1/ping | grep "Pong"
       - name: Build and push
@@ -61,11 +61,11 @@ jobs:
             "HASH_PASSWORD=${{ secrets.DOCKER_UID_HASH_PASSWORD }}"
           # platforms: linux/amd64
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/rest.vm-runner:cache-latest
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/rest.vm-runner:cache-latest,mode=max
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:cache-latest
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:cache-latest,mode=max
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/rest.vm-runner:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/rest.vm-runner:${{ env._VERSION }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/rest.bv-vm-runner:${{ env._VERSION }}
           push: true
       - name: Trigger release
         env:

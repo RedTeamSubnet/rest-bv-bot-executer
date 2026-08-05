@@ -505,7 +505,7 @@ results/
 output/
 outputs/
 .benchmarks/
-rest.vm-runner/
+rest.bv-vm-runner/
 
 # Files:
 log
@@ -521,7 +521,7 @@ results
 output
 outputs
 .benchmarks
-rest.vm-runner
+rest.bv-vm-runner
 env
 *.bak
 pm2-process.json

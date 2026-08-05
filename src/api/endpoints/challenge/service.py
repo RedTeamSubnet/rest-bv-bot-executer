@@ -15,7 +15,7 @@ from api.config import config
 from api.logger import logger
 
 # Clean build context for the miner submission. In the runner container this
-# resolves to /app/rest.vm-runner/bot. The miner submission is exactly two
+# resolves to /app/rest.bv-vm-runner/bot. The miner submission is exactly two
 # files: Dockerfile and bot.py.
 
 
