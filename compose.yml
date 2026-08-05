@@ -1,6 +1,6 @@
 services:
   vm-runner-api:
-    # image: redteamsubnet61/rest.mdm-sn-container-runner:latest
+    image: redteamsubnet61/bv-bot-runner:latest
     build:
       context: .
     restart: unless-stopped
