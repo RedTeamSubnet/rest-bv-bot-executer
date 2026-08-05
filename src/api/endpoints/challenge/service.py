@@ -169,7 +169,7 @@ def _run_miner_container(
             "cap_drop": ["NET_RAW", "NET_ADMIN"],
             "security_opt": ["no-new-privileges"],
             "detach": True,
-            "auto_remove": True,
+            "auto_remove": False,
             "shm_size": "4g",
             "read_only": False,
             "entrypoint": ["python3"],
