@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.1-260805 (2026-08-05)
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+
+
+**Full Changelog**: https://github.com/RedTeamSubnet/rest-bv-bot-executer/commits/v0.1.1-260805
+
 ## v0.1.0-250826 (2025-08-26)
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->
