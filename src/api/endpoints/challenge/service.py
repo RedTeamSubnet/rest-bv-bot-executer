@@ -327,6 +327,13 @@ def run_simple_bot(score_job_id: str = "", timeout_sec: int = 60) -> Dict:
     except Exception as err:
         runner_error = str(err)
         logger.warning(f"Simple bot miner container exited unsuccessfully: {err}")
+        return {
+            "status": "success",
+            "passed": False,
+            "is_bot": True,
+            "user_identifier": user_identifier,
+            "runner_error": runner_error,
+        }
     is_bot = _poll_simple_bot_result(
         user_identifier, timeout_sec=timeout_sec, result_url=public_url
     )
