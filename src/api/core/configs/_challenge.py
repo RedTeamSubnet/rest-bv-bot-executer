@@ -22,6 +22,7 @@ class ChallengeConfig(FrozenBaseConfig):
     simple_bot_poll_max_attempts: int = Field(default=5, ge=1)
     simple_bot_poll_interval_sec: float = Field(default=2.0, ge=0)
     container_run_timeout_sec: int = Field(default=10, ge=0)
+    container_max_runtime_sec: int = Field(default=300, ge=1)
 
     model_config = SettingsConfigDict(env_prefix="MDM_CHALLENGE_")
 

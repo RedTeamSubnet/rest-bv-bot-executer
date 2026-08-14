@@ -58,7 +58,8 @@ Set deployment values through the root `.env` file or service environment. Never
 | `MDM_CHALLENGE_SIMPLE_BOT_URL` | `https://simplebot.theredteam.io` | Simple-bot target URL. |
 | `MDM_CHALLENGE_SIMPLE_BOT_POLL_MAX_ATTEMPTS` | `5` | Maximum simple-bot result polls. |
 | `MDM_CHALLENGE_SIMPLE_BOT_POLL_INTERVAL_SEC` | `2` | Seconds between simple-bot polls. |
-| `MDM_CHALLENGE_CONTAINER_RUN_TIMEOUT_SEC` | `10` | Per-container run timeout. |
+| `MDM_CHALLENGE_CONTAINER_RUN_TIMEOUT_SEC` | `10` | Time allowed for a prior singleton run to finish before force removal. |
+| `MDM_CHALLENGE_CONTAINER_MAX_RUNTIME_SEC` | `120` | Maximum miner container runtime before force removal. |
 | `DOCKER_HOST` | daemon default | Docker socket/daemon used to build and run images. |
 
 Use Compose service names inside Compose networks (`http://challenge-api:10001`) and `localhost` only for host-local processes.
