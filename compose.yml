@@ -19,9 +19,6 @@ services:
       - "../../../volumes/storage/rest-mdm-sn-container-runner/data:${VM_RUNNER_API_DATA_DIR:-/var/lib/rest.bv-vm-runner}"
       - "dind-socket:/docker-socket"
 
-    ports:
-      - "${VM_RUNNER_API_PORT:-8000}:${VM_RUNNER_API_PORT:-8000}"
-
   vm-runner-dind:
     build:
       context: .
